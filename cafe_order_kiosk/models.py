@@ -23,6 +23,15 @@ class MenuItem:
     is_available: bool = True
 
 
+OPTION_PRICES: dict[str, int] = {
+    "샷추가": 500,
+    "사이즈업": 1000,
+    "휘핑크림": 500,
+    "시럽추가": 300,
+    "디카페인": 300,
+}
+
+
 @dataclass
 class OrderItem:
     menu_item_id: int
@@ -32,8 +41,13 @@ class OrderItem:
     options: list[str] = field(default_factory=list)
 
     @property
+    def surcharge(self) -> int:
+        return sum(OPTION_PRICES.get(opt.strip(), 0) for opt in self.options)
+
+    @property
     def line_total(self) -> int:
-        return self.unit_price * self.quantity
+        return (self.unit_price + self.surcharge) * self.quantity
+
 
 
 @dataclass(frozen=True)

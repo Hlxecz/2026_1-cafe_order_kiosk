@@ -3,7 +3,7 @@ from __future__ import annotations
 import shlex
 from dataclasses import dataclass
 
-from cafe_order_kiosk.models import OrderStatus
+from cafe_order_kiosk.models import OrderStatus, OPTION_PRICES
 from cafe_order_kiosk.kiosk_store import KioskStore
 from cafe_order_kiosk.utils import format_money
 
@@ -74,6 +74,9 @@ def handle_menu(store: KioskStore) -> None:
             f"\t{item.id}. {item.name} ({item.category}) - {format_money(item.price)}"
             f"{description}"
         )
+    print("\n  추가 가능한 옵션:")
+    for opt, price in OPTION_PRICES.items():
+        print(f"    - {opt}: +{format_money(price)}원")
 
 
 def handle_order(store: KioskStore, state: CLIState, args: list[str]) -> None:
@@ -220,7 +223,14 @@ def print_order(order) -> None:
         return
 
     for idx, item in enumerate(order.items, start=1):
-        options = f" [{', '.join(item.options)}]" if item.options else ""
+        options_detail = []
+        for opt in item.options:
+            surch = OPTION_PRICES.get(opt.strip(), 0)
+            if surch > 0:
+                options_detail.append(f"{opt}(+{format_money(surch)})")
+            else:
+                options_detail.append(opt)
+        options = f" [{', '.join(options_detail)}]" if item.options else ""
         print(
             f"  {idx}. {item.name}{options} x{item.quantity}"
             f" - {format_money(item.line_total)}"

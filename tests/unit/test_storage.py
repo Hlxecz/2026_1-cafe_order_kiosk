@@ -63,3 +63,26 @@ def test_cancel_paid_order_is_error() -> None:
 
     with pytest.raises(ValueError, match="Paid order cannot be canceled"):
         store.cancel_order(order.id)
+
+
+def test_order_item_option_surcharges() -> None:
+    store = KioskStore.with_default_menu()
+    order = store.create_order()
+
+    # Menu 1 is Americano (3500)
+    # Adding 1 Americano with "샷추가" (+500) and "사이즈업" (+1000)
+    # Total should be (3500 + 500 + 1000) * 1 = 5000
+    store.add_item(order.id, menu_item_id=1, quantity=1, options=["샷추가", "사이즈업"])
+
+    # Adding 2 Lattes (4000) with "디카페인" (+300) and a free option "ice" (+0)
+    # Total should be (4000 + 300) * 2 = 8600
+    store.add_item(order.id, menu_item_id=2, quantity=2, options=["디카페인", "ice"])
+
+    order = store.get_order(order.id)
+    assert order is not None
+    assert order.items[0].surcharge == 1500
+    assert order.items[0].line_total == 5000
+    assert order.items[1].surcharge == 300
+    assert order.items[1].line_total == 8600
+    assert order.total == 5000 + 8600
+
