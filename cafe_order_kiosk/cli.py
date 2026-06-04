@@ -67,13 +67,49 @@ def print_help() -> None:
 
 
 def handle_menu(store: KioskStore) -> None:
-    print("메뉴:")
-    for item in store.list_menu():
-        description = f" - {item.description}" if item.description else ""
-        print(
-            f"\t{item.id}. {item.name} ({item.category}) - {format_money(item.price)}"
-            f"{description}"
-        )
+    print("메뉴 목록:")
+    print("  * 세트 자동 할인: 음료(coffee, tea, juice) 1개 + 디저트/베이커리(bakery, dessert) 1개 동시 주문 시 세트당 500원 자동 할인!")
+
+    items = store.list_menu()
+    beverages: dict[str, list[MenuItem]] = {}
+    desserts: dict[str, list[MenuItem]] = {}
+    others: dict[str, list[MenuItem]] = {}
+
+    for item in items:
+        cat = item.category or "기타"
+        if cat in {"coffee", "tea", "juice"}:
+            beverages.setdefault(cat, []).append(item)
+        elif cat in {"bakery", "dessert"}:
+            desserts.setdefault(cat, []).append(item)
+        else:
+            others.setdefault(cat, []).append(item)
+
+    if beverages:
+        print("\n  [ 음료 (세트할인 대상) ]")
+        for cat_name in ["coffee", "tea", "juice"]:
+            if cat_name in beverages:
+                print(f"    * {cat_name.upper()}")
+                for item in beverages[cat_name]:
+                    desc = f" - {item.description}" if item.description else ""
+                    print(f"\t{item.id}. {item.name} - {format_money(item.price)}원{desc}")
+
+    if desserts:
+        print("\n  [ 디저트/베이커리 (세트할인 대상) ]")
+        for cat_name in ["bakery", "dessert"]:
+            if cat_name in desserts:
+                print(f"    * {cat_name.upper()}")
+                for item in desserts[cat_name]:
+                    desc = f" - {item.description}" if item.description else ""
+                    print(f"\t{item.id}. {item.name} - {format_money(item.price)}원{desc}")
+
+    if others:
+        print("\n  [ 기타 ]")
+        for cat_name, item_list in others.items():
+            print(f"    * {cat_name.upper()}")
+            for item in item_list:
+                desc = f" - {item.description}" if item.description else ""
+                print(f"\t{item.id}. {item.name} - {format_money(item.price)}원{desc}")
+
     print("\n  추가 가능한 옵션:")
     for opt, price in OPTION_PRICES.items():
         print(f"    - {opt}: +{format_money(price)}원")
@@ -235,6 +271,8 @@ def print_order(order) -> None:
             f"  {idx}. {item.name}{options} x{item.quantity}"
             f" - {format_money(item.line_total)}"
         )
+    if order.discount > 0:
+        print(f"  할인 (세트 할인): -{format_money(order.discount)}")
     print(f"합계: {format_money(order.total)}")
 
 

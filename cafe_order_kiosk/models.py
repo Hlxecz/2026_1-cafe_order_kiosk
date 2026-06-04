@@ -39,6 +39,7 @@ class OrderItem:
     unit_price: int
     quantity: int
     options: list[str] = field(default_factory=list)
+    category: str | None = None
 
     @property
     def surcharge(self) -> int:
@@ -69,5 +70,19 @@ class Order:
     payment: Payment | None = None
 
     @property
+    def discount(self) -> int:
+        beverage_count = 0
+        dessert_count = 0
+        for item in self.items:
+            if item.category in {"coffee", "tea", "juice"}:
+                beverage_count += item.quantity
+            elif item.category in {"bakery", "dessert"}:
+                dessert_count += item.quantity
+        
+        num_sets = min(beverage_count, dessert_count)
+        return num_sets * 500
+
+    @property
     def total(self) -> int:
-        return sum(item.line_total for item in self.items)
+        subtotal = sum(item.line_total for item in self.items)
+        return max(0, subtotal - self.discount)

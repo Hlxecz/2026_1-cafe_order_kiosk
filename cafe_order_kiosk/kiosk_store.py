@@ -80,6 +80,7 @@ class KioskStore:
             unit_price=menu_item.price,
             quantity=quantity,
             options=options or [],
+            category=menu_item.category,
         )
         order.items.append(order_item)
         return order

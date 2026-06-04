@@ -86,3 +86,78 @@ def test_order_item_option_surcharges() -> None:
     assert order.items[1].line_total == 8600
     assert order.total == 5000 + 8600
 
+
+def test_set_menu_discount_single() -> None:
+    store = KioskStore.with_default_menu()
+    order = store.create_order()
+
+    # 1 Americano (3500) + 1 Butter Croissant (3500)
+    store.add_item(order.id, menu_item_id=1, quantity=1)
+    store.add_item(order.id, menu_item_id=8, quantity=1)
+
+    order = store.get_order(order.id)
+    assert order is not None
+    assert order.discount == 500
+    assert order.total == (3500 + 3500) - 500
+
+
+def test_set_menu_discount_multiple() -> None:
+    store = KioskStore.with_default_menu()
+    order = store.create_order()
+
+    # 2 Americano (3500 * 2 = 7000)
+    store.add_item(order.id, menu_item_id=1, quantity=2)
+    # 1 Butter Croissant (3500)
+    store.add_item(order.id, menu_item_id=8, quantity=1)
+    # 1 Cheesecake (5200)
+    store.add_item(order.id, menu_item_id=10, quantity=1)
+
+    order = store.get_order(order.id)
+    assert order is not None
+    # 2 beverages, 2 bakery/dessert -> 2 sets
+    assert order.discount == 1000
+    assert order.total == (7000 + 3500 + 5200) - 1000
+
+
+def test_set_menu_discount_none() -> None:
+    store = KioskStore.with_default_menu()
+    order = store.create_order()
+
+    # 2 Lattes (4000 * 2 = 8000)
+    store.add_item(order.id, menu_item_id=2, quantity=2)
+
+    order = store.get_order(order.id)
+    assert order is not None
+    assert order.discount == 0
+    assert order.total == 8000
+
+
+def test_print_order_discount(capsys: pytest.CaptureFixture[str]) -> None:
+    from cafe_order_kiosk.cli import print_order
+    store = KioskStore.with_default_menu()
+    order = store.create_order()
+    store.add_item(order.id, menu_item_id=1, quantity=1)
+    store.add_item(order.id, menu_item_id=8, quantity=1)
+
+    order = store.get_order(order.id)
+    assert order is not None
+    print_order(order)
+
+    captured = capsys.readouterr()
+    assert "할인 (세트 할인): -500" in captured.out
+    assert "합계: 6,500" in captured.out
+
+
+def test_handle_menu_set_tags(capsys: pytest.CaptureFixture[str]) -> None:
+    from cafe_order_kiosk.cli import handle_menu
+    store = KioskStore.with_default_menu()
+    handle_menu(store)
+
+    captured = capsys.readouterr()
+    assert "세트 자동 할인" in captured.out
+    assert "[ 음료 (세트할인 대상) ]" in captured.out
+    assert "[ 디저트/베이커리 (세트할인 대상) ]" in captured.out
+
+
+
+
