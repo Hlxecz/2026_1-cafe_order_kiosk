@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable
 
 from cafe_order_kiosk.models import MenuItem, Order, OrderItem, OrderStatus, Payment, SalesAnalytics
-from cafe_order_kiosk.utils import utc_now
+from cafe_order_kiosk.utils import local_now
 
 DEFAULT_MENU: tuple[MenuItem, ...] = (
     MenuItem(id=1, name="Americano", price=3500, category="coffee"),
@@ -103,7 +103,7 @@ class KioskStore:
             raise ValueError("Paid order cannot be canceled")
 
         order.status = OrderStatus.CANCELED
-        order.canceled_at = utc_now()
+        order.canceled_at = local_now()
         return order
 
     def pay_order(self, order_id: int, method: str, amount: int) -> Order:
@@ -116,7 +116,7 @@ class KioskStore:
             raise ValueError("Payment amount does not match total")
 
         order.status = OrderStatus.PAID
-        order.paid_at = utc_now()
+        order.paid_at = local_now()
         order.payment = Payment(method=method, amount=amount, paid_at=order.paid_at)
         return order
 
@@ -131,14 +131,14 @@ class KioskStore:
 
         paid_orders = [o for o in self._orders.values() if o.status == OrderStatus.PAID]
 
-        # 오늘 날짜 (UTC 기준)
-        now = utc_now()
-        utc_today = now.date()
+        # 오늘 날짜 (로컬 기준)
+        now = local_now()
+        local_today = now.date()
 
         today_paid_orders = []
         for o in paid_orders:
             if o.paid_at is not None:
-                if o.paid_at.date() == utc_today:
+                if o.paid_at.date() == local_today:
                     today_paid_orders.append(o)
 
         today_sales = sum(o.total for o in today_paid_orders)
@@ -158,7 +158,7 @@ class KioskStore:
                 menu_counter[item.name] += item.quantity
         top_menu = menu_counter.most_common(3)
 
-        # 피크 시간대 분석 (UTC 기준)
+        # 피크 시간대 분석 (로컬 기준)
         hour_counter: Counter[int] = Counter()
         for o in paid_orders:
             if o.paid_at:

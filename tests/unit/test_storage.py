@@ -177,7 +177,7 @@ def test_sales_analytics_with_data(monkeypatch) -> None:
     now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
     yesterday = now - timedelta(days=1)
 
-    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: now)
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.local_now", lambda: now)
 
     order1 = store.create_order()
     store.add_item(order1.id, menu_item_id=1, quantity=2)
@@ -188,12 +188,13 @@ def test_sales_analytics_with_data(monkeypatch) -> None:
     store.add_item(order2.id, menu_item_id=1, quantity=1)
     store.pay_order(order2.id, method="cash", amount=3500)
 
-    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: yesterday)
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.local_now", lambda: yesterday)
     order3 = store.create_order()
     store.add_item(order3.id, menu_item_id=3, quantity=1)
     store.pay_order(order3.id, method="card", amount=4200)
 
-    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: now)
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.local_now", lambda: now)
+
 
 
     stats = store.get_sales_analytics()

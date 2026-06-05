@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from cafe_order_kiosk.utils import utc_now
+from cafe_order_kiosk.utils import local_now
 
 
 class OrderStatus(str, Enum):
@@ -63,7 +63,7 @@ class Order:
     id: int
     items: list[OrderItem] = field(default_factory=list)
     status: OrderStatus = OrderStatus.OPEN
-    created_at: datetime = field(default_factory=utc_now)
+    created_at: datetime = field(default_factory=local_now)
     paid_at: datetime | None = None
     canceled_at: datetime | None = None
     note: str | None = None
