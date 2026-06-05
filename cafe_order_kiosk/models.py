@@ -86,3 +86,13 @@ class Order:
     def total(self) -> int:
         subtotal = sum(item.line_total for item in self.items)
         return max(0, subtotal - self.discount)
+
+
+@dataclass
+class SalesAnalytics:
+    today_sales_amount: int
+    today_paid_orders_count: int
+    payment_methods: dict[str, int]
+    top_menu_items: list[tuple[str, int]]
+    peak_hours: list[tuple[int, int]]
+

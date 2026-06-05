@@ -45,6 +45,8 @@ def run_cli() -> int:
             handle_orders(store, args)
         elif command in {"결제", "pay"}:
             handle_pay(store, state, args)
+        elif command in {"통계", "stats"}:
+            handle_stats(store)
         else:
             print("알 수 없는 명령입니다. '도움말'을 입력하세요.")
     print("종료합니다.")
@@ -62,6 +64,7 @@ def print_help() -> None:
     print("\t주문 취소")
     print("\t주문목록 목록 [진행중|결제완료|취소]")
     print("\t결제 <방법> [금액]")
+    print("\t통계")
     print("\t도움말")
     print("\t종료")
 
@@ -309,3 +312,41 @@ def format_status(status: OrderStatus) -> str:
         OrderStatus.CANCELED: "취소",
     }
     return status_map.get(status, status.value)
+
+
+def handle_stats(store: KioskStore) -> None:
+    stats = store.get_sales_analytics()
+
+    print("========================================")
+    print("            매출 통계 리포트            ")
+    print("========================================")
+
+    print("[ 오늘 매출 현황 ]")
+    print(f"  - 총 결제 주문 건수: {stats.today_paid_orders_count} 건")
+    print(f"  - 오늘 하루 매출액  : {format_money(stats.today_sales_amount)} 원")
+
+    print("\n[ 결제 수단별 건수 (누적) ]")
+    if not stats.payment_methods:
+        print("  - 내역 없음")
+    else:
+        for method, count in stats.payment_methods.items():
+            print(f"  - {method}: {count} 건")
+
+    print("\n[ 가장 많이 팔린 메뉴 Top 3 (누적) ]")
+    if not stats.top_menu_items:
+        print("  - 내역 없음")
+    else:
+        for idx, (name, qty) in enumerate(stats.top_menu_items, start=1):
+            print(f"  {idx}. {name} ({qty} 개)")
+
+    print("\n[ 피크 시간대 분석 (누적) ]")
+    if not stats.peak_hours:
+        print("  - 내역 없음")
+    else:
+        top_hour, top_count = stats.peak_hours[0]
+        print(f"  - 가장 주문이 많았던 시간: {top_hour:02d}시 ({top_count} 건)")
+        distribution = ", ".join(f"{h:02d}시({c}건)" for h, c in sorted(stats.peak_hours))
+        print(f"  - 시간대별 분포: {distribution}")
+
+    print("========================================")
+

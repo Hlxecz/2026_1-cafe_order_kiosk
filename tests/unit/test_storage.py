@@ -159,5 +159,76 @@ def test_handle_menu_set_tags(capsys: pytest.CaptureFixture[str]) -> None:
     assert "[ 디저트/베이커리 (세트할인 대상) ]" in captured.out
 
 
+def test_sales_analytics_empty() -> None:
+    store = KioskStore.with_default_menu()
+    stats = store.get_sales_analytics()
+    assert stats.today_sales_amount == 0
+    assert stats.today_paid_orders_count == 0
+    assert not stats.payment_methods
+    assert not stats.top_menu_items
+    assert not stats.peak_hours
+
+
+def test_sales_analytics_with_data(monkeypatch) -> None:
+    from datetime import datetime, timezone, timedelta
+
+    store = KioskStore.with_default_menu()
+
+    now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
+    yesterday = now - timedelta(days=1)
+
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: now)
+
+    order1 = store.create_order()
+    store.add_item(order1.id, menu_item_id=1, quantity=2)
+    store.add_item(order1.id, menu_item_id=2, quantity=1)
+    store.pay_order(order1.id, method="card", amount=11000)
+
+    order2 = store.create_order()
+    store.add_item(order2.id, menu_item_id=1, quantity=1)
+    store.pay_order(order2.id, method="cash", amount=3500)
+
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: yesterday)
+    order3 = store.create_order()
+    store.add_item(order3.id, menu_item_id=3, quantity=1)
+    store.pay_order(order3.id, method="card", amount=4200)
+
+    monkeypatch.setattr("cafe_order_kiosk.kiosk_store.utc_now", lambda: now)
+
+
+    stats = store.get_sales_analytics()
+
+    assert stats.today_sales_amount == 14500
+    assert stats.today_paid_orders_count == 2
+    assert stats.payment_methods == {"card": 2, "cash": 1}
+    assert stats.top_menu_items[0] == ("Americano", 3)
+
+    menu_names = [item[0] for item in stats.top_menu_items]
+    assert "Americano" in menu_names
+    assert "Latte" in menu_names
+    assert "Cappuccino" in menu_names
+
+    assert stats.peak_hours[0] == (12, 3)
+
+
+def test_cli_handle_stats(capsys) -> None:
+    from cafe_order_kiosk.cli import handle_stats
+    store = KioskStore.with_default_menu()
+
+    order = store.create_order()
+    store.add_item(order.id, menu_item_id=1, quantity=1)
+    store.pay_order(order.id, method="card", amount=3500)
+
+    handle_stats(store)
+    captured = capsys.readouterr()
+
+    # Avoid specific Korean characters in assertions to prevent Windows encoding (CP949) issues in output captures
+    assert "card" in captured.out
+    assert "1" in captured.out
+    assert "Americano" in captured.out
+
+
+
+
 
 

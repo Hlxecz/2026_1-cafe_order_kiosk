@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from cafe_order_kiosk.models import MenuItem, Order, OrderItem, OrderStatus, Payment
+from cafe_order_kiosk.models import MenuItem, Order, OrderItem, OrderStatus, Payment, SalesAnalytics
 from cafe_order_kiosk.utils import utc_now
 
 DEFAULT_MENU: tuple[MenuItem, ...] = (
@@ -125,3 +125,52 @@ class KioskStore:
         if order is None:
             raise ValueError("Order not found")
         return order
+
+    def get_sales_analytics(self) -> SalesAnalytics:
+        from collections import Counter
+
+        paid_orders = [o for o in self._orders.values() if o.status == OrderStatus.PAID]
+
+        # 오늘 날짜 (UTC 기준)
+        now = utc_now()
+        utc_today = now.date()
+
+        today_paid_orders = []
+        for o in paid_orders:
+            if o.paid_at is not None:
+                if o.paid_at.date() == utc_today:
+                    today_paid_orders.append(o)
+
+        today_sales = sum(o.total for o in today_paid_orders)
+        today_count = len(today_paid_orders)
+
+        # 결제 수단 비율
+        payment_methods: dict[str, int] = {}
+        for o in paid_orders:
+            if o.payment:
+                method = o.payment.method
+                payment_methods[method] = payment_methods.get(method, 0) + 1
+
+        # 가장 많이 팔린 메뉴 Top 3
+        menu_counter: Counter[str] = Counter()
+        for o in paid_orders:
+            for item in o.items:
+                menu_counter[item.name] += item.quantity
+        top_menu = menu_counter.most_common(3)
+
+        # 피크 시간대 분석 (UTC 기준)
+        hour_counter: Counter[int] = Counter()
+        for o in paid_orders:
+            if o.paid_at:
+                hour_counter[o.paid_at.hour] += 1
+        peak_hours = hour_counter.most_common()
+
+        return SalesAnalytics(
+            today_sales_amount=today_sales,
+            today_paid_orders_count=today_count,
+            payment_methods=payment_methods,
+            top_menu_items=top_menu,
+            peak_hours=peak_hours,
+        )
+
+
